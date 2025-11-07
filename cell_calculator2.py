@@ -8,12 +8,12 @@ from google.oauth2.service_account import Credentials
 import pandas as pd 
 
 # --- 1. 앱의 기본 설정 ---
-st.set_page_config(page_title="세포 수 계산기 v31 (로그 조회)", layout="wide")
-st.title("🔬 간단한 세포 수 계산기 v31")
+st.set_page_config(page_title="세포 수 계산기 v32 (로그 조회)", layout="wide")
+st.title("🔬 간단한 세포 수 계산기 v32")
 st.write("계산기 탭에서 일지를 기록하고, 로그 조회 탭에서 데이터를 확인하세요.")
 
 # --- 2. Google Sheets 인증 및 데이터 로드 ---
-# (v30과 동일)
+# (v31과 동일)
 SHEET_FILE_NAME = "Cell Culture Log" # ⬅️ (v27에서 설정한 파일 이름)
 SHEET_TAB_NAME = "Log"               # ⬅️ (v27에서 설정한 탭 이름)
 
@@ -54,14 +54,17 @@ if auth_error_msg:
 tab1, tab2 = st.tabs(["🔬 계산기", "📊 로그 조회"])
 
 
-# --- 4. 탭 1: 계산기 (v30과 동일) ---
+# --- 4. 탭 1: 계산기 (v32 수정됨) ---
 with tab1:
-    # (v30의 사이드바 코드는 그대로 사용)
+    # (v31의 사이드바 코드는 그대로 사용)
     st.sidebar.header("[1단계] 세포 계수 정보")
     num_squares_counted = st.sidebar.number_input("1. 계수한 칸의 수", min_value=1, max_value=9, value=4, step=1)
     live_cell_counts = [] 
     dead_cell_counts = [] 
-    st.sidebar.write("2. 각 칸의 세포 수를 입력하세요:")
+    
+    # ▼▼▼ [수정됨] v32: "2. " 제거 ▼▼▼
+    st.sidebar.write("각 칸의 세포 수를 입력하세요:")
+    
     for i in range(int(num_squares_counted)):
         col1, col2 = st.sidebar.columns(2)
         live_count = col1.number_input(f"   칸 {i+1} (Live)", min_value=0, value=50, step=1, key=f"calc_live_count_{i}")
@@ -77,12 +80,20 @@ with tab1:
         target_cells = st.sidebar.number_input("   -> 원하는 총 세포 수를 입력하세요", min_value=0.0, value=1000000.0, step=1000.0, format="%.0f")
     else:
         target_cells = default_target_cells
+    
     st.sidebar.header("[3단계] 분주용 현탁액 조건 입력") 
-    pipette_volume = st.sidebar.number_input("6. 세포를 심을 부피 (mL)", min_value=0.1, value=2.0, step=0.1)
+    
+    # ▼▼▼ [수정됨] v32: "세포를 심을" 제거 ▼▼▼
+    pipette_volume = st.sidebar.number_input(
+        "6. 부피 (mL)", 
+        min_value=0.1, value=2.0, step=0.1
+    )
+    # ▲▲▲ [수정됨] v32 ▲▲▲
+    
     st.sidebar.header("[4단계] 일지 정보 입력")
     num_operators = st.sidebar.number_input("총 작업자 수:", min_value=1, value=1, step=1)
     
-    # (v30의 계산 함수)
+    # (v31의 계산 함수)
     def perform_calculation():
         try:
             if num_squares_counted <= 0: st.error("!오류: '계수한 칸의 수'는 0보다 커야 합니다."); return False
@@ -117,7 +128,7 @@ with tab1:
         except Exception as e:
             st.error(f"계산 중 오류가 발생했습니다: {e}"); return False
 
-    # (v30의 계산 버튼 로직)
+    # (v31의 계산 버튼 로직)
     if st.sidebar.button("✨ 계산 실행하기 ✨", type="primary"):
         if perform_calculation():
             st.session_state.calculation_done = True
@@ -125,11 +136,11 @@ with tab1:
             st.session_state.calculation_done = False
             if "results" in st.session_state: del st.session_state.results
 
-    # (v30의 결과 및 일지 기록 폼)
+    # (v31의 결과 및 일지 기록 폼)
     if st.session_state.get("calculation_done", False) and "results" in st.session_state:
         results = st.session_state.results
         
-        # (결과 출력 1, 2, 3 생략 - v30과 동일)
+        # (결과 출력 1, 2, 3 생략 - v31과 동일)
         st.header("🔬 계산 결과")
         st.subheader("[1] 현재 세포 상태")
         col1, col2, col3 = st.columns(3)
@@ -205,14 +216,14 @@ with tab1:
         st.info("왼쪽 사이드바에서 값을 입력하고 '계산 실행하기' 버튼을 눌러주세요.")
 
 
-# --- 5. 탭 2: 로그 조회 (v31 수정됨) ---
+# --- 5. 탭 2: 로그 조회 (v32 수정됨) ---
 with tab2:
     st.header("📊 배양 일지 로그 조회")
     
-    # (B) 데이터 로드 (v30과 동일)
+    # (B) 데이터 로드 (v31과 동일)
     df, data_error_msg = load_data(client) # 캐시된 데이터 사용
 
-    # (C) 새로고침 버튼 (v30과 동일)
+    # (C) 새로고침 버튼 (v31과 동일)
     if st.button("새로고침 (Refresh Data)"):
         st.cache_data.clear() # 데이터 캐시 지우기
         st.cache_resource.clear() # 인증 캐시 지우기
@@ -223,7 +234,7 @@ with tab2:
     elif df.empty:
         st.warning("아직 저장된 로그가 없습니다. '계산기' 탭에서 일지를 저장하세요.")
     else:
-        # --- (D) 데이터 전처리 (v31 수정됨) ---
+        # --- (D) 데이터 전처리 (v31과 동일) ---
         df_display = df.copy()
         try:
             if 'Timestamp' in df_display.columns:
@@ -232,23 +243,18 @@ with tab2:
                 df_display['Viability_Percent'] = pd.to_numeric(df_display['Viability_Percent'], errors='coerce')
             if 'Passage_No' in df_display.columns:
                 df_display['Passage_No'] = pd.to_numeric(df_display['Passage_No'], errors='coerce')
-            
-            # ▼▼▼ [신규] v31: 새 그래프를 위한 숫자 변환 ▼▼▼
             if 'Total_Live_Cells_in_Tube' in df_display.columns:
                 df_display['Total_Live_Cells_in_Tube'] = pd.to_numeric(df_display['Total_Live_Cells_in_Tube'], errors='coerce')
             if 'Total_Dishes_Made' in df_display.columns:
                 df_display['Total_Dishes_Made'] = pd.to_numeric(df_display['Total_Dishes_Made'], errors='coerce')
-            # ▲▲▲ [신규] v31 ▲▲▲
-            
             if 'Operators' in df_display.columns:
                 df_display['Operators'] = df_display['Operators'].astype(str) 
             if 'Cell_Name' in df_display.columns:
                 df_display['Cell_Name'] = df_display['Cell_Name'].astype(str)
-                
         except Exception as e:
             st.warning(f"데이터 타입 변환 중 오류: {e} (일부 필터가 작동하지 않을 수 있습니다)")
 
-        # --- (E) 필터 (v30과 동일) ---
+        # --- (E) 필터 (v31과 동일) ---
         st.subheader("필터")
         
         # 1. 세포 이름 필터 
@@ -322,22 +328,16 @@ with tab2:
             st.info("'Viability_Percent' 컬럼이 없거나 비어있습니다.")
             selected_v_range = None
 
-
-        # --- (F) 필터 로직 (v30과 동일) ---
+        # --- (F) 필터 로직 (v31과 동일) ---
         df_filtered = df_display.copy()
         
-        # 1. 세포 이름
+        # (필터 로직 생략 - v31과 동일)
         if 'Cell_Name' in df_filtered.columns and selected_cells:
             df_filtered = df_filtered[df_filtered['Cell_Name'].isin(selected_cells)]
-        # 2. 날짜
         if 'Timestamp' in df_filtered.columns and selected_date_range and len(selected_date_range) == 2:
             start_date = pd.to_datetime(selected_date_range[0])
             end_date = pd.to_datetime(selected_date_range[1]).replace(hour=23, minute=59, second=59)
-            df_filtered = df_filtered[
-                (df_filtered['Timestamp'] >= start_date) & 
-                (df_filtered['Timestamp'] <= end_date)
-            ]
-        # 3. 작업자
+            df_filtered = df_filtered[(df_filtered['Timestamp'] >= start_date) & (df_filtered['Timestamp'] <= end_date)]
         if 'Operators' in df_filtered.columns and selected_operators:
             mask = df_filtered['Operators'].apply(
                 lambda op_string: any(
@@ -346,20 +346,18 @@ with tab2:
                 )
             )
             df_filtered = df_filtered[mask]
-        # 4. 계대 배수
         if 'Passage_No' in df_filtered.columns and selected_p_range:
             df_filtered = df_filtered[
                 (df_filtered['Passage_No'] >= selected_p_range[0]) &
                 (df_filtered['Passage_No'] <= selected_p_range[1])
             ]
-        # 5. 생존률
         if 'Viability_Percent' in df_filtered.columns and selected_v_range:
             df_filtered = df_filtered[
                 (df_filtered['Viability_Percent'] >= selected_v_range[0]) &
                 (df_filtered['Viability_Percent'] <= selected_v_range[1])
             ]
 
-        # --- (G) 데이터 표시 (v30과 동일) ---
+        # --- (G) 데이터 표시 (v31과 동일) ---
         st.subheader(f"필터링된 로그 ({len(df_filtered)} / {len(df_display)} 건)")
         columns_order = [
             "Timestamp", "Cell_Name", "Passage_No", "Operators", "Viability_Percent", 
@@ -373,7 +371,7 @@ with tab2:
         
         st.divider()
 
-        # --- (H) 시각화 (v30과 동일) ---
+        # --- (H) 시각화 (v31과 동일) ---
         st.subheader("Viability (생존률) 추이")
         if (not df_filtered.empty and 
             'Viability_Percent' in df_filtered.columns and 
@@ -394,11 +392,10 @@ with tab2:
         else:
             st.info("차트를 그릴 데이터가 부족합니다. (Timestamp, Cell_Name, Viability_Percent 컬럼 필요)")
 
-        # ▼▼▼ [신규] v31: 새 그래프 2개 추가 ▼▼▼
         
         st.divider()
 
-        # --- (I) 총 세포 수 추이 ---
+        # --- (I) 총 세포 수 추이 (v31과 동일) ---
         st.subheader("총 보유 세포 수 (Live) 추이")
         if (not df_filtered.empty and 
             'Total_Live_Cells_in_Tube' in df_filtered.columns and 
@@ -406,14 +403,12 @@ with tab2:
             'Cell_Name' in df_filtered.columns):
             
             try:
-                # (Total_Live_Cells_in_Tube가 숫자가 아닌 경우 제외)
                 chart_df_cells = df_filtered.dropna(subset=['Total_Live_Cells_in_Tube', 'Timestamp', 'Cell_Name'])
-                
                 chart_data_cells = chart_df_cells.pivot_table(
                     index='Timestamp', 
                     columns='Cell_Name', 
                     values='Total_Live_Cells_in_Tube',
-                    aggfunc='mean' # 같은 날짜/세포가 여러 개일 경우 평균
+                    aggfunc='mean' 
                 )
                 st.line_chart(chart_data_cells)
             except Exception as e:
@@ -423,17 +418,18 @@ with tab2:
 
         st.divider()
 
-        # --- (J) 총 배양접시 수 추이 ---
-        st.subheader("총 배양접시 수 (Made) 추이")
+        # --- (J) 총 배양접시 수 추이 (v32 수정됨) ---
+        
+        # ▼▼▼ [수정됨] v32: "(Made)" 제거 ▼▼▼
+        st.subheader("총 배양접시 수 추이")
+        
         if (not df_filtered.empty and 
             'Total_Dishes_Made' in df_filtered.columns and 
             'Timestamp' in df_filtered.columns and 
             'Cell_Name' in df_filtered.columns):
             
             try:
-                # (Total_Dishes_Made가 숫자가 아닌 경우 제외)
                 chart_df_dishes = df_filtered.dropna(subset=['Total_Dishes_Made', 'Timestamp', 'Cell_Name'])
-                
                 chart_data_dishes = chart_df_dishes.pivot_table(
                     index='Timestamp', 
                     columns='Cell_Name', 
@@ -445,4 +441,4 @@ with tab2:
                 st.warning(f"총 배양접시 수 차트 생성 중 오류: {e}")
         else:
             st.info("차트를 그릴 데이터가 부족합니다. (Timestamp, Cell_Name, Total_Dishes_Made 컬럼 필요)")
-        # ▲▲▲ [신규] v31 끝 ▲▲▲
+        # ▲▲▲ [수정됨] v32 끝 ▲▲▲
