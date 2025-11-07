@@ -6,15 +6,10 @@ from oauth2client.service_account import ServiceAccountCredentials
 import json 
 import base64 
 
-# --- 1. 앱의 기본 설정 ---
-st.set_page_config(page_title="세포 수 계산기 v23 (G-Sheets)", layout="wide")
-st.title("🔬 간단한 세포 수 계산기 v23 (G-Sheets 연동)")
-st.write("실험 값을 입력하면, 필요한 새 배지와 총 접시 수를 계산합니다.")
-
-st.divider() # 구분선
-
-# --- 2. 입력 섹션 (Sidebar) ---
-# (v22와 동일하므로 생략)
+# (1~64번째 줄까지 v23과 동일)
+# ...
+st.set_page_config(page_title="세포 수 계산기 v24 (G-Sheets)", layout="wide")
+# ... (사이드바 코드 생략) ...
 st.sidebar.header("[1단계] 세포 계수 정보")
 num_squares_counted = st.sidebar.number_input("1. 계수한 칸의 수", min_value=1, max_value=9, value=4, step=1)
 live_cell_counts = [] 
@@ -41,11 +36,15 @@ st.sidebar.header("[4단계] 일지 정보 입력")
 num_operators = st.sidebar.number_input("총 작업자 수:", min_value=1, value=1, step=1)
 
 
-# ▼▼▼ [수정됨] v23: 구글 시트 탭 이름 지정 ▼▼▼
+# ▼▼▼ [수정됨] v24: 구글 시트 탭 이름 지정 ▼▼▼
 
 # 1. 구글 시트 API 접근 권한 범위 설정
-scope = ['https://spreadsheets.google.com/feeds',
-         'https://www.googleapis.com/auth/drive']
+# (v23의 'feeds' 대신 최신 'spreadsheets' 권한으로 명시적 변경)
+scope = [
+    'https://www.googleapis.com/auth/spreadsheets',
+    'https://www.googleapis.com/auth/drive'
+]
+# ▲▲▲ [수정됨] v24 ▲▲▲
 
 try:
     # (배포용 코드) Secrets에서 Base64 문자열 읽기
@@ -74,16 +73,15 @@ except Exception as e_cloud:
 client = gspread.authorize(creds)
 
 # ❗️❗️❗️ 1. 구글 시트 파일 이름 (이전에 설정) ❗️❗️❗️
-SHEET_FILE_NAME = "Cell Culture Log" 
+SHEET_FILE_NAME = "Cell Culture Log" # ⬅️ (이름 확인!)
 
 # ❗️❗️❗️ 2. 데이터를 저장할 '시트 탭' 이름 (신규) ❗️❗️❗️
-# (구글 시트의 탭 이름과 정확히 일치해야 함)
-SHEET_TAB_NAME = "Log" 
+SHEET_TAB_NAME = "Log" # ⬅️ (탭 이름 확인!)
 
 try:
     # 1. 구글 시트 파일 열기
     sh = client.open(SHEET_FILE_NAME)
-    # 2. 이름으로 특정 시트 탭 열기 (v22의 .sheet1 대신 사용)
+    # 2. 이름으로 특정 시트 탭 열기
     sheet = sh.worksheet(SHEET_TAB_NAME)
     
 except gspread.exceptions.SpreadsheetNotFound:
@@ -97,14 +95,10 @@ except Exception as e:
     st.error(f"시트 열기 실패: {e}")
     st.stop()
 
-# ▲▲▲ [수정됨] v23: 구글 시트 설정 끝 ▲▲▲
-
 
 # --- 3. 계산 실행 버튼 ---
+# (이하 코드는 v23과 동일)
 if st.sidebar.button("✨ 계산 실행하기 ✨", type="primary"):
-
-    # --- 계산 로직 ---
-    # (v22와 동일하므로 생략)
     try:
         if num_squares_counted <= 0:
             st.error("!오류: '계수한 칸의 수'는 0보다 커야 합니다.")
@@ -126,8 +120,6 @@ if st.sidebar.button("✨ 계산 실행하기 ✨", type="primary"):
                 required_volume = target_cells / cells_per_ml
                 available_dishes = int(total_live_cells_in_tube // target_cells)
 
-                # --- 4. 결과 출력 (메인 화면) ---
-                # (v22와 동일하므로 생략)
                 st.header("🔬 계산 결과")
                 st.subheader("[1] 현재 세포 상태")
                 col1, col2, col3 = st.columns(3)
@@ -166,8 +158,6 @@ if st.sidebar.button("✨ 계산 실행하기 ✨", type="primary"):
                         st.code(recipe_text, language="text")
                         st.success(f"➡️ **이 분주용 현탁액을 {pipette_volume:.1f} mL씩 분주하면, 총 {total_dishes_final}개의 배양접시를 만들 수 있습니다.**")
 
-                        # --- 일지 기록 폼 ---
-                        # (v22와 동일하므로 생략)
                         st.divider()
                         st.subheader("✍️ 이 작업을 배양 일지에 기록합니다")
 
@@ -186,10 +176,8 @@ if st.sidebar.button("✨ 계산 실행하기 ✨", type="primary"):
                             submit_button = st.form_submit_button(label="일지 저장하기", type="primary")
 
                         if submit_button:
-                            # --- 저장 로직 ---
-                            # (v22와 동일하므로 생략)
                             log_data_list = [
-                                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                datetime.now().strftime("%Y-m-%d %H:%M:%S"),
                                 cell_name, int(passage_num),
                                 ", ".join(operators_list), # 작업자 리스트를 텍스트 한 줄로 변환
                                 notes, f"{viability:.2f}",
@@ -200,7 +188,6 @@ if st.sidebar.button("✨ 계산 실행하기 ✨", type="primary"):
                                 f"{total_working_volume:.3f}", int(total_dishes_final)
                             ]
                             try:
-                                # v23에서도 이 부분은 동일
                                 sheet.append_row(log_data_list)
                                 st.success(f"✅ 일지 저장 완료! (Cell: {cell_name}, P:{passage_num})")
                                 st.info(f"Google Sheet '{SHEET_TAB_NAME}' 탭에 데이터가 성공적으로 기록되었습니다.")
