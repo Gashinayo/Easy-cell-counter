@@ -2,14 +2,21 @@ import streamlit as st
 import math
 from datetime import datetime
 import gspread 
-from oauth2client.service_account import ServiceAccountCredentials
 import json 
-import base64 
+# ▼▼▼ [수정됨] v25: 최신 인증 라이브러리 ▼▼▼
+from google.oauth2.service_account import Credentials 
+# (oauth2client 라이브러리 삭제)
 
-# (1~64번째 줄까지 v23과 동일)
-# ...
-st.set_page_config(page_title="세포 수 계산기 v24 (G-Sheets)", layout="wide")
-# ... (사이드바 코드 생략) ...
+# --- 1. 앱의 기본 설정 ---
+# (이 부분은 앱 실행 시 항상 표시됩니다)
+st.set_page_config(page_title="세포 수 계산기 v25 (G-Sheets)", layout="wide")
+st.title("🔬 간단한 세포 수 계산기 v25 (G-Sheets 연동)")
+st.write("실험 값을 입력하면, 필요한 새 배지와 총 접시 수를 계산합니다.")
+st.divider() # 구분선
+# ▲▲▲ [수정됨] v25: UI 문제 해결 ▲▲▲
+
+# --- 2. 입력 섹션 (Sidebar) ---
+# (v24와 동일하므로 생략)
 st.sidebar.header("[1단계] 세포 계수 정보")
 num_squares_counted = st.sidebar.number_input("1. 계수한 칸의 수", min_value=1, max_value=9, value=4, step=1)
 live_cell_counts = [] 
@@ -36,69 +43,18 @@ st.sidebar.header("[4단계] 일지 정보 입력")
 num_operators = st.sidebar.number_input("총 작업자 수:", min_value=1, value=1, step=1)
 
 
-# ▼▼▼ [수정됨] v24: 구글 시트 탭 이름 지정 ▼▼▼
-
-# 1. 구글 시트 API 접근 권한 범위 설정
-# (v23의 'feeds' 대신 최신 'spreadsheets' 권한으로 명시적 변경)
-scope = [
-    'https://www.googleapis.com/auth/spreadsheets',
-    'https://www.googleapis.com/auth/drive'
-]
-# ▲▲▲ [수정됨] v24 ▲▲▲
-
-try:
-    # (배포용 코드) Secrets에서 Base64 문자열 읽기
-    base64_string = st.secrets["gcp_json_base64"]
-    json_string = base64.b64decode(base64_string).decode("utf-8")
-    creds_dict = json.loads(json_string) 
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-
-except KeyError:
-    # (로컬 테스트용 코드)
-    st.warning("로컬 테스트 모드로 실행 중입니다. ('gcreds.json' 파일 사용)")
-    try:
-        creds = ServiceAccountCredentials.from_json_keyfile_name('gcreds.json', scope)
-    except FileNotFoundError:
-        st.error("로컬 테스트를 위해 'gcreds.json' 파일을 폴더에 추가하세요.")
-        st.stop()
-    except Exception as e_local:
-        st.error(f"로컬 'gcreds.json' 파일 로드 실패: {e_local}")
-        st.stop()
-except Exception as e_cloud:
-    # (배포용 코드)
-    st.error(f"Google API 인증 정보 로드 실패 (Secrets 포맷 확인): {e_cloud}")
-    st.stop()
-
-# 인증된 클라이언트 생성
-client = gspread.authorize(creds)
-
 # ❗️❗️❗️ 1. 구글 시트 파일 이름 (이전에 설정) ❗️❗️❗️
 SHEET_FILE_NAME = "Cell Culture Log" # ⬅️ (이름 확인!)
 
 # ❗️❗️❗️ 2. 데이터를 저장할 '시트 탭' 이름 (신규) ❗️❗️❗️
 SHEET_TAB_NAME = "Log" # ⬅️ (탭 이름 확인!)
 
-try:
-    # 1. 구글 시트 파일 열기
-    sh = client.open(SHEET_FILE_NAME)
-    # 2. 이름으로 특정 시트 탭 열기
-    sheet = sh.worksheet(SHEET_TAB_NAME)
-    
-except gspread.exceptions.SpreadsheetNotFound:
-    st.error(f"시트 파일 '{SHEET_FILE_NAME}'을(를) 찾을 수 없습니다. (이름/봇 초대 확인)")
-    st.stop()
-except gspread.exceptions.WorksheetNotFound:
-    # [신규 에러] 탭을 못 찾을 경우
-    st.error(f"파일 '{SHEET_FILE_NAME}'에서 '{SHEET_TAB_NAME}' 탭을 찾을 수 없습니다! 탭 이름을 확인하세요.")
-    st.stop()
-except Exception as e:
-    st.error(f"시트 열기 실패: {e}")
-    st.stop()
-
 
 # --- 3. 계산 실행 버튼 ---
-# (이하 코드는 v23과 동일)
 if st.sidebar.button("✨ 계산 실행하기 ✨", type="primary"):
+
+    # --- 계산 로직 ---
+    # (v24와 동일)
     try:
         if num_squares_counted <= 0:
             st.error("!오류: '계수한 칸의 수'는 0보다 커야 합니다.")
@@ -120,6 +76,8 @@ if st.sidebar.button("✨ 계산 실행하기 ✨", type="primary"):
                 required_volume = target_cells / cells_per_ml
                 available_dishes = int(total_live_cells_in_tube // target_cells)
 
+                # --- 4. 결과 출력 (메인 화면) ---
+                # (v24와 동일)
                 st.header("🔬 계산 결과")
                 st.subheader("[1] 현재 세포 상태")
                 col1, col2, col3 = st.columns(3)
@@ -158,46 +116,83 @@ if st.sidebar.button("✨ 계산 실행하기 ✨", type="primary"):
                         st.code(recipe_text, language="text")
                         st.success(f"➡️ **이 분주용 현탁액을 {pipette_volume:.1f} mL씩 분주하면, 총 {total_dishes_final}개의 배양접시를 만들 수 있습니다.**")
 
-                        st.divider()
-                        st.subheader("✍️ 이 작업을 배양 일지에 기록합니다")
+                        # ▼▼▼ [수정됨] v25: 인증 및 폼 로직 ▼▼▼
+                        
+                        # [계산 성공 후] Google Sheets 인증 시도
+                        try:
+                            # 1. Secrets에서 JSON 통-문자열 로드 (v21 방식)
+                            json_string = st.secrets["gcp_json_string"]
+                            creds_dict = json.loads(json_string) 
 
-                        with st.form(key="log_form"):
-                            st.write("**일지 정보 입력**") 
-                            cell_name = st.text_input("세포 이름 (Cell Line ID):")
-                            passage_num = st.number_input("계대 배수 (Passage No.):", min_value=0, step=1)
-                            st.write("---") 
-                            operators_list = [] 
-                            st.write(f"**작업자 (총 {int(num_operators)}명) 정보**")
-                            for i in range(int(num_operators)):
-                                operator_name = st.text_input(f"작업자 {i+1} 이름:", key=f"operator_name_{i}")
-                                operators_list.append(operator_name)
-                            st.write("---")
-                            notes = st.text_area("특이사항 (Notes):")
-                            submit_button = st.form_submit_button(label="일지 저장하기", type="primary")
-
-                        if submit_button:
-                            log_data_list = [
-                                datetime.now().strftime("%Y-m-%d %H:%M:%S"),
-                                cell_name, int(passage_num),
-                                ", ".join(operators_list), # 작업자 리스트를 텍스트 한 줄로 변환
-                                notes, f"{viability:.2f}",
-                                int(total_live_cells_counted), int(total_dead_cells_counted),
-                                f"{cells_per_ml:.2e}", f"{total_live_cells_in_tube:.2e}",
-                                float(total_stock_vol), f"{target_cells:.2e}",
-                                float(pipette_volume), f"{media_to_add:.3f}",
-                                f"{total_working_volume:.3f}", int(total_dishes_final)
+                            # 2. Scopes 정의
+                            scope = [
+                                'https://www.googleapis.com/auth/spreadsheets',
+                                'https://www.googleapis.com/auth/drive'
                             ]
-                            try:
-                                sheet.append_row(log_data_list)
-                                st.success(f"✅ 일지 저장 완료! (Cell: {cell_name}, P:{passage_num})")
-                                st.info(f"Google Sheet '{SHEET_TAB_NAME}' 탭에 데이터가 성공적으로 기록되었습니다.")
-                            except Exception as e:
-                                st.error(f"Google Sheet 저장 실패: {e}")
-                                st.warning("아래 JSON 데이터를 수동으로 복사하세요:")
-                                st.json(log_data_list) 
+                            
+                            # 3. 최신 인증 방식
+                            creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+                            client = gspread.authorize(creds)
+                            
+                            # 4. 시트 열기 (v23 방식)
+                            sh = client.open(SHEET_FILE_NAME)
+                            sheet = sh.worksheet(SHEET_TAB_NAME)
+                            
+                            # 5. (인증 성공 시) 일지 기록 폼 표시
+                            st.divider()
+                            st.subheader("✍️ 이 작업을 배양 일지에 기록합니다")
+
+                            with st.form(key="log_form"):
+                                st.write("**일지 정보 입력**") 
+                                cell_name = st.text_input("세포 이름 (Cell Line ID):")
+                                passage_num = st.number_input("계대 배수 (Passage No.):", min_value=0, step=1)
+                                st.write("---") 
+                                operators_list = [] 
+                                st.write(f"**작업자 (총 {int(num_operators)}명) 정보**")
+                                for i in range(int(num_operators)):
+                                    operator_name = st.text_input(f"작업자 {i+1} 이름:", key=f"operator_name_{i}")
+                                    operators_list.append(operator_name)
+                                st.write("---")
+                                notes = st.text_area("특이사항 (Notes):")
+                                submit_button = st.form_submit_button(label="일지 저장하기", type="primary")
+
+                            if submit_button:
+                                log_data_list = [
+                                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                    cell_name, int(passage_num),
+                                    ", ".join(operators_list), 
+                                    notes, f"{viability:.2f}",
+                                    int(total_live_cells_counted), int(total_dead_cells_counted),
+                                    f"{cells_per_ml:.2e}", f"{total_live_cells_in_tube:.2e}",
+                                    float(total_stock_vol), f"{target_cells:.2e}",
+                                    float(pipette_volume), f"{media_to_add:.3f}",
+                                    f"{total_working_volume:.3f}", int(total_dishes_final)
+                                ]
+                                try:
+                                    # 6. 시트에 쓰기
+                                    sheet.append_row(log_data_list)
+                                    st.success(f"✅ 일지 저장 완료! (Cell: {cell_name}, P:{passage_num})")
+                                    st.info(f"Google Sheet '{SHEET_TAB_NAME}' 탭에 데이터가 성공적으로 기록되었습니다.")
+                                except Exception as e:
+                                    st.error(f"Google Sheet 저장 실패: {e}")
+                                    st.warning("아래 JSON 데이터를 수동으로 복사하세요:")
+                                    st.json(log_data_list)
+                        
+                        # ▼▼▼ [수정됨] v25: 인증 실패 시 에러 처리 ▼▼▼
+                        except KeyError:
+                            st.error("⚠️ Google API 인증 정보(Secrets)가 설정되지 않았습니다. 'gcp_json_string' 키를 확인하세요.")
+                        except gspread.exceptions.SpreadsheetNotFound:
+                            st.error(f"⚠️ 시트 파일 '{SHEET_FILE_NAME}'을(를) 찾을 수 없습니다. (이름/봇 초대 확인)")
+                        except gspread.exceptions.WorksheetNotFound:
+                            st.error(f"⚠️ 파일 '{SHEET_FILE_NAME}'에서 '{SHEET_TAB_NAME}' 탭을 찾을 수 없습니다! (탭 이름 확인)")
+                        except Exception as e:
+                            st.error(f"Google Sheets 연동 실패: {e}")
+                            st.warning("Secrets 설정, API 권한, 봇 초대, 파일/탭 이름을 다시 확인하세요.")
+                        # ▲▲▲ [수정됨] v25 끝 ▲▲▲
 
     except Exception as e:
         st.error(f"계산 중 오류가 발생했습니다: {e}")
 
 else:
+    # (앱의 초기 화면)
     st.info("왼쪽 사이드바에서 값을 입력하고 '계산 실행하기' 버튼을 눌러주세요.")
