@@ -1,3 +1,15 @@
+아, 이 TypeError는 '로그 조회' 탭에서 데이터를 불러올 때 Cell_Name 컬럼에 숫자와 문자가 섞여있어서 sorted() (정렬) 함수가 실패할 때 발생합니다.
+
+예를 들어, "hADSC" (문자)와 "123" (숫자)이 섞여 있으면 파이썬이 "어떤 것을 먼저 정렬해야 할지 모르겠다"며 TypeError를 냅니다.
+
+🔧 해결책 (v30)
+'로그 조회' 탭의 데이터 전처리((D)) 부분에, Cell_Name 컬럼의 모든 데이터를 강제로 문자열(str)로 변환하는 코드를 한 줄 추가했습니다.
+
+이 v30 코드로 cell_calculator.py를 덮어쓰고 GitHub에 업로드/재부팅하시면 에러가 해결될 것입니다. (v29와 마찬가지로 requirements.txt에는 4줄이 필요합니다.)
+
+🐍 세포 수 계산기 v30 (TypeError 수정)
+Python
+
 import streamlit as st
 import math
 from datetime import datetime
@@ -8,18 +20,15 @@ from google.oauth2.service_account import Credentials
 import pandas as pd 
 
 # --- 1. 앱의 기본 설정 ---
-st.set_page_config(page_title="세포 수 계산기 v29 (로그 조회)", layout="wide")
-st.title("🔬 간단한 세포 수 계산기 v29")
+st.set_page_config(page_title="세포 수 계산기 v30 (로그 조회)", layout="wide")
+st.title("🔬 간단한 세포 수 계산기 v30")
 st.write("계산기 탭에서 일지를 기록하고, 로그 조회 탭에서 데이터를 확인하세요.")
 
 # --- 2. Google Sheets 인증 및 데이터 로드 ---
-
-# --- 시트 정보 (전역 변수) ---
-# ❗️❗️❗️ 이 부분은 연구원님의 시트 정보와 일치해야 합니다 ❗️❗️❗️
+# (v29와 동일)
 SHEET_FILE_NAME = "Cell Culture Log" # ⬅️ (v27에서 설정한 파일 이름)
 SHEET_TAB_NAME = "Log"               # ⬅️ (v27에서 설정한 탭 이름)
 
-# (1) 인증된 '클라이언트' 생성 (10분간 캐시)
 @st.cache_resource(ttl=600)
 def get_gspread_client():
     try:
@@ -27,46 +36,39 @@ def get_gspread_client():
             'https://www.googleapis.com/auth/spreadsheets',
             'https://www.googleapis.com/auth/drive'
         ]
-        # v26 방식 (Base64)으로 Secrets 로드
         base64_string = st.secrets["gcp_json_base64"]
         json_string = base64.b64decode(base64_string).decode("utf-8")
         creds_dict = json.loads(json_string) 
-        
         creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
         client = gspread.authorize(creds)
         return client, None
     except Exception as e:
         return None, f"Google 인증 실패: {e}"
 
-# (2) 데이터 로드 (1분간 캐시)
 @st.cache_data(ttl=60)
-def load_data(_client): # _client 인자는 캐시를 트리거하기 위해 받음
+def load_data(_client): 
     try:
         sh = _client.open(SHEET_FILE_NAME)
         sheet = sh.worksheet(SHEET_TAB_NAME)
-        data = sheet.get_all_records() # 데이터를 딕셔너리 리스트로 가져옴
-        df = pd.DataFrame(data) # Pandas DataFrame으로 변환
+        data = sheet.get_all_records() 
+        df = pd.DataFrame(data) 
         return df, None
     except Exception as e:
         return pd.DataFrame(), f"Google Sheets 데이터 로드 실패: {e}"
 
 # --- 3. 앱 실행 ---
-
-# (A) 클라이언트 인증
 client, auth_error_msg = get_gspread_client()
-
 if auth_error_msg:
     st.error(auth_error_msg)
     st.warning("Secrets 설정, API 권한, 봇 초대, 파일/탭 이름을 다시 확인하세요.")
-    st.stop() # 인증 실패 시 앱 중지
+    st.stop() 
 
-# (B) 탭 생성
 tab1, tab2 = st.tabs(["🔬 계산기", "📊 로그 조회"])
 
 
-# --- 4. 탭 1: 계산기 (v28과 동일) ---
+# --- 4. 탭 1: 계산기 (v29와 동일) ---
 with tab1:
-    # (v28의 사이드바 코드는 그대로 사용)
+    # (v29의 사이드바 코드는 그대로 사용)
     st.sidebar.header("[1단계] 세포 계수 정보")
     num_squares_counted = st.sidebar.number_input("1. 계수한 칸의 수", min_value=1, max_value=9, value=4, step=1)
     live_cell_counts = [] 
@@ -92,7 +94,7 @@ with tab1:
     st.sidebar.header("[4단계] 일지 정보 입력")
     num_operators = st.sidebar.number_input("총 작업자 수:", min_value=1, value=1, step=1)
     
-    # (v28의 계산 함수)
+    # (v29의 계산 함수)
     def perform_calculation():
         try:
             if num_squares_counted <= 0: st.error("!오류: '계수한 칸의 수'는 0보다 커야 합니다."); return False
@@ -114,7 +116,6 @@ with tab1:
             media_to_add = total_working_volume - total_stock_vol
             total_dishes_final = math.floor(total_working_volume / pipette_volume)
             
-            # (계산 성공 시) 결과값을 st.session_state에 저장
             st.session_state.results = {
                 "cells_per_ml": cells_per_ml, "total_live_cells_in_tube": total_live_cells_in_tube,
                 "total_stock_vol": total_stock_vol, "total_all_cells_counted": total_all_cells_counted,
@@ -128,7 +129,7 @@ with tab1:
         except Exception as e:
             st.error(f"계산 중 오류가 발생했습니다: {e}"); return False
 
-    # (v28의 계산 버튼 로직)
+    # (v29의 계산 버튼 로직)
     if st.sidebar.button("✨ 계산 실행하기 ✨", type="primary"):
         if perform_calculation():
             st.session_state.calculation_done = True
@@ -136,11 +137,11 @@ with tab1:
             st.session_state.calculation_done = False
             if "results" in st.session_state: del st.session_state.results
 
-    # (v28의 결과 및 일지 기록 폼)
+    # (v29의 결과 및 일지 기록 폼)
     if st.session_state.get("calculation_done", False) and "results" in st.session_state:
         results = st.session_state.results
         
-        # (결과 출력 1, 2, 3 생략 - v28과 동일)
+        # (결과 출력 1, 2, 3 생략 - v29와 동일)
         st.header("🔬 계산 결과")
         st.subheader("[1] 현재 세포 상태")
         col1, col2, col3 = st.columns(3)
@@ -186,7 +187,6 @@ with tab1:
 
             if submit_button:
                 try:
-                    # (글로벌 client 사용)
                     sh = client.open(SHEET_FILE_NAME)
                     sheet = sh.worksheet(SHEET_TAB_NAME)
                     
@@ -206,7 +206,6 @@ with tab1:
                     st.success(f"✅ 일지 저장 완료! (Cell: {cell_name}, P:{passage_num})")
                     st.info("로그 조회 탭을 확인하세요 (새로고침 필요).")
                     
-                    # (캐시 클리어 및 상태 초기화)
                     st.cache_data.clear() 
                     st.cache_resource.clear() 
                     st.session_state.calculation_done = False
@@ -218,14 +217,14 @@ with tab1:
         st.info("왼쪽 사이드바에서 값을 입력하고 '계산 실행하기' 버튼을 눌러주세요.")
 
 
-# --- 5. 탭 2: 로그 조회 (v29 수정됨) ---
+# --- 5. 탭 2: 로그 조회 (v30 수정됨) ---
 with tab2:
     st.header("📊 배양 일지 로그 조회")
     
-    # (B) 데이터 로드 (v28과 동일)
+    # (B) 데이터 로드 (v29와 동일)
     df, data_error_msg = load_data(client) # 캐시된 데이터 사용
 
-    # (C) 새로고침 버튼 (v28과 동일)
+    # (C) 새로고침 버튼 (v29와 동일)
     if st.button("새로고침 (Refresh Data)"):
         st.cache_data.clear() # 데이터 캐시 지우기
         st.cache_resource.clear() # 인증 캐시 지우기
@@ -236,37 +235,43 @@ with tab2:
     elif df.empty:
         st.warning("아직 저장된 로그가 없습니다. '계산기' 탭에서 일지를 저장하세요.")
     else:
-        # --- (D) 데이터 전처리 (v29 수정됨) ---
+        # --- (D) 데이터 전처리 (v30 수정됨) ---
         df_display = df.copy()
         try:
-            # 시트의 모든 데이터를 숫자로 변환 시도 (문자열 포함될 수 있으므로)
             if 'Timestamp' in df_display.columns:
                 df_display['Timestamp'] = pd.to_datetime(df_display['Timestamp'])
             if 'Viability_Percent' in df_display.columns:
                 df_display['Viability_Percent'] = pd.to_numeric(df_display['Viability_Percent'], errors='coerce')
             if 'Passage_No' in df_display.columns:
                 df_display['Passage_No'] = pd.to_numeric(df_display['Passage_No'], errors='coerce')
+            
+            # ▼▼▼ [수정됨] v30: TypeError 방지를 위해 문자로 강제 변환 ▼▼▼
             if 'Operators' in df_display.columns:
-                df_display['Operators'] = df_display['Operators'].astype(str) # 문자열로 변환
+                df_display['Operators'] = df_display['Operators'].astype(str) 
+            if 'Cell_Name' in df_display.columns:
+                df_display['Cell_Name'] = df_display['Cell_Name'].astype(str)
+            # ▲▲▲ [수정됨] v30 ▲▲▲
+                
         except Exception as e:
             st.warning(f"데이터 타입 변환 중 오류: {e} (일부 필터가 작동하지 않을 수 있습니다)")
 
-        # --- (E) 필터 (v29 수정됨) ---
+        # --- (E) 필터 (v29와 동일) ---
         st.subheader("필터")
         
-        # 1. 세포 이름 필터 (v28과 동일)
+        # 1. 세포 이름 필터 
         if 'Cell_Name' in df_display.columns:
+            # (v30에서 .astype(str)로 변환했기 때문에 sorted()가 안전함)
             all_cell_names = sorted(df_display['Cell_Name'].dropna().unique())
             selected_cells = st.multiselect(
                 "세포 이름 (Cell Name) 필터:",
                 options=all_cell_names,
-                default=list(all_cell_names) # 기본값: 모두 선택
+                default=list(all_cell_names) 
             )
         else:
             st.info("'Cell_Name' 컬럼이 시트에 없습니다. (헤더 확인)")
             selected_cells = []
 
-        # 2. 날짜 범위 필터 (v28과 동일)
+        # 2. 날짜 범위 필터
         if 'Timestamp' in df_display.columns and not df_display['Timestamp'].isnull().all():
             min_date = df_display['Timestamp'].min().date()
             max_date = df_display['Timestamp'].max().date()
@@ -281,30 +286,27 @@ with tab2:
             st.info("'Timestamp' 컬럼이 없거나 비어있습니다.")
             selected_date_range = None
 
-        # ▼▼▼ [신규] 3. 작업자 필터 ▼▼▼
+        # 3. 작업자 필터
         if 'Operators' in df_display.columns:
             all_operators = set()
-            # 쉼표로 구분된 문자열을 분리, 공백 제거, 고유 목록 생성
             for op_list in df_display['Operators'].dropna():
                 operators = [op.strip() for op in op_list.split(',') if op.strip()]
                 all_operators.update(operators)
-            
             sorted_operators = sorted(list(all_operators))
-            
             selected_operators = st.multiselect(
                 "작업자 (Operators) 필터:",
                 options=sorted_operators,
-                default=list(sorted_operators) # 기본값: 모두 선택
+                default=list(sorted_operators) 
             )
         else:
             st.info("'Operators' 컬럼이 시트에 없습니다.")
             selected_operators = []
 
-        # ▼▼▼ [신규] 4. 계대 배수(P#) 필터 ▼▼▼
+        # 4. 계대 배수(P#) 필터
         if 'Passage_No' in df_display.columns and not df_display['Passage_No'].isnull().all():
             min_p = int(df_display['Passage_No'].min())
             max_p = int(df_display['Passage_No'].max())
-            if min_p == max_p: # 슬라이더가 값이 같으면 에러날 수 있음
+            if min_p == max_p: 
                  selected_p_range = st.slider(
                     "계대 배수 (Passage No.) 범위:",
                     min_value=min_p - 1, max_value=max_p + 1, value=(min_p, max_p)
@@ -318,7 +320,7 @@ with tab2:
             st.info("'Passage_No' 컬럼이 없거나 비어있습니다.")
             selected_p_range = None
 
-        # ▼▼▼ [신규] 5. 생존률(Viability) 필터 (0-100 고정) ▼▼▼
+        # 5. 생존률(Viability) 필터 (0-100 고정)
         if 'Viability_Percent' in df_display.columns and not df_display['Viability_Percent'].isnull().all():
             selected_v_range = st.slider(
                 "세포 생존률 (Viability) 범위 (%):",
@@ -327,10 +329,9 @@ with tab2:
         else:
             st.info("'Viability_Percent' 컬럼이 없거나 비어있습니다.")
             selected_v_range = None
-        # ▲▲▲ [신규] 필터 3, 4, 5 완료 ▲▲▲
 
 
-        # --- (F) 필터 로직 (v29 수정됨) ---
+        # --- (F) 필터 로직 (v29와 동일) ---
         df_filtered = df_display.copy()
         
         # 1. 세포 이름
@@ -346,9 +347,8 @@ with tab2:
                 (df_filtered['Timestamp'] <= end_date)
             ]
         
-        # ▼▼▼ [신규] 3. 작업자 필터 로직 ▼▼▼
+        # 3. 작업자 필터 로직
         if 'Operators' in df_filtered.columns and selected_operators:
-            # (선택된 작업자 중 한 명이라도 포함되면 True - OR 로직)
             mask = df_filtered['Operators'].apply(
                 lambda op_string: any(
                     selected_op in [op.strip() for op in op_string.split(',')]
@@ -357,21 +357,21 @@ with tab2:
             )
             df_filtered = df_filtered[mask]
         
-        # ▼▼▼ [신규] 4. 계대 배수 필터 로직 ▼▼▼
+        # 4. 계대 배수 필터 로직
         if 'Passage_No' in df_filtered.columns and selected_p_range:
             df_filtered = df_filtered[
                 (df_filtered['Passage_No'] >= selected_p_range[0]) &
                 (df_filtered['Passage_No'] <= selected_p_range[1])
             ]
             
-        # ▼▼▼ [신규] 5. 생존률 필터 로직 ▼▼▼
+        # 5. 생존률 필터 로직
         if 'Viability_Percent' in df_filtered.columns and selected_v_range:
             df_filtered = df_filtered[
                 (df_filtered['Viability_Percent'] >= selected_v_range[0]) &
                 (df_filtered['Viability_Percent'] <= selected_v_range[1])
             ]
 
-        # --- (G) 데이터 표시 (v28과 동일) ---
+        # --- (G) 데이터 표시 (v29와 동일) ---
         st.subheader(f"필터링된 로그 ({len(df_filtered)} / {len(df_display)} 건)")
         columns_order = [
             "Timestamp", "Cell_Name", "Passage_No", "Operators", "Viability_Percent", 
@@ -385,7 +385,7 @@ with tab2:
         
         st.divider()
 
-        # --- (H) 시각화 (v28과 동일) ---
+        # --- (H) 시각화 (v29와 동일) ---
         st.subheader("Viability (생존률) 추이")
         if (not df_filtered.empty and 
             'Viability_Percent' in df_filtered.columns and 
