@@ -1,15 +1,3 @@
-아, 이 TypeError는 '로그 조회' 탭에서 데이터를 불러올 때 Cell_Name 컬럼에 숫자와 문자가 섞여있어서 sorted() (정렬) 함수가 실패할 때 발생합니다.
-
-예를 들어, "hADSC" (문자)와 "123" (숫자)이 섞여 있으면 파이썬이 "어떤 것을 먼저 정렬해야 할지 모르겠다"며 TypeError를 냅니다.
-
-🔧 해결책 (v30)
-'로그 조회' 탭의 데이터 전처리((D)) 부분에, Cell_Name 컬럼의 모든 데이터를 강제로 문자열(str)로 변환하는 코드를 한 줄 추가했습니다.
-
-이 v30 코드로 cell_calculator.py를 덮어쓰고 GitHub에 업로드/재부팅하시면 에러가 해결될 것입니다. (v29와 마찬가지로 requirements.txt에는 4줄이 필요합니다.)
-
-🐍 세포 수 계산기 v30 (TypeError 수정)
-Python
-
 import streamlit as st
 import math
 from datetime import datetime
@@ -407,3 +395,4 @@ with tab2:
                 st.info("데이터가 차트 생성에 적합한지 확인하세요 (예: Timestamp, Viability_Percent).")
         else:
             st.info("차트를 그릴 데이터가 부족합니다. (Timestamp, Cell_Name, Viability_Percent 컬럼 필요)")
+
