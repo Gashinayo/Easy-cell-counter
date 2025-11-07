@@ -4,17 +4,17 @@ from datetime import datetime
 import gspread 
 from oauth2client.service_account import ServiceAccountCredentials
 import json 
-import base64 # ⬅️ [신규] Base64 라이브러리 추가
+import base64 
 
 # --- 1. 앱의 기본 설정 ---
-st.set_page_config(page_title="세포 수 계산기 v22 (G-Sheets)", layout="wide")
-st.title("🔬 간단한 세포 수 계산기 v22 (G-Sheets 연동)")
+st.set_page_config(page_title="세포 수 계산기 v23 (G-Sheets)", layout="wide")
+st.title("🔬 간단한 세포 수 계산기 v23 (G-Sheets 연동)")
 st.write("실험 값을 입력하면, 필요한 새 배지와 총 접시 수를 계산합니다.")
 
 st.divider() # 구분선
 
 # --- 2. 입력 섹션 (Sidebar) ---
-# (v19~21과 동일하므로 생략)
+# (v22와 동일하므로 생략)
 st.sidebar.header("[1단계] 세포 계수 정보")
 num_squares_counted = st.sidebar.number_input("1. 계수한 칸의 수", min_value=1, max_value=9, value=4, step=1)
 live_cell_counts = [] 
@@ -41,20 +41,17 @@ st.sidebar.header("[4단계] 일지 정보 입력")
 num_operators = st.sidebar.number_input("총 작업자 수:", min_value=1, value=1, step=1)
 
 
-# ▼▼▼ [수정됨] v22: 구글 시트 연동 (Base64 방식) ▼▼▼
+# ▼▼▼ [수정됨] v23: 구글 시트 탭 이름 지정 ▼▼▼
 
 # 1. 구글 시트 API 접근 권한 범위 설정
 scope = ['https://spreadsheets.google.com/feeds',
          'https://www.googleapis.com/auth/drive']
 
 try:
-    # (배포용 코드) Secrets에서 'gcp_json_base64'라는 '한 줄 텍스트'를 읽어옴
+    # (배포용 코드) Secrets에서 Base64 문자열 읽기
     base64_string = st.secrets["gcp_json_base64"]
-    # Base64 텍스트를 디코딩하여 원래의 JSON 문자열로 복원
     json_string = base64.b64decode(base64_string).decode("utf-8")
-    # 문자열을 딕셔너리로 변환
     creds_dict = json.loads(json_string) 
-    # 딕셔너리를 사용해 인증
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 
 except KeyError:
@@ -69,33 +66,45 @@ except KeyError:
         st.error(f"로컬 'gcreds.json' 파일 로드 실패: {e_local}")
         st.stop()
 except Exception as e_cloud:
-    # (배포용 코드) Base64 디코딩/json.loads 실패 등 (Secrets 포맷이 잘못된 경우)
+    # (배포용 코드)
     st.error(f"Google API 인증 정보 로드 실패 (Secrets 포맷 확인): {e_cloud}")
     st.stop()
 
 # 인증된 클라이언트 생성
 client = gspread.authorize(creds)
 
-# ❗️❗️❗️ 이 부분은 연구원님의 시트 제목으로 꼭 수정해주세요 ❗️❗️❗️
+# ❗️❗️❗️ 1. 구글 시트 파일 이름 (이전에 설정) ❗️❗️❗️
 SHEET_FILE_NAME = "Cell Culture Log" 
 
+# ❗️❗️❗️ 2. 데이터를 저장할 '시트 탭' 이름 (신규) ❗️❗️❗️
+# (구글 시트의 탭 이름과 정확히 일치해야 함)
+SHEET_TAB_NAME = "Log" 
+
 try:
-    sheet = client.open(SHEET_FILE_NAME).sheet1
+    # 1. 구글 시트 파일 열기
+    sh = client.open(SHEET_FILE_NAME)
+    # 2. 이름으로 특정 시트 탭 열기 (v22의 .sheet1 대신 사용)
+    sheet = sh.worksheet(SHEET_TAB_NAME)
+    
 except gspread.exceptions.SpreadsheetNotFound:
     st.error(f"시트 파일 '{SHEET_FILE_NAME}'을(를) 찾을 수 없습니다. (이름/봇 초대 확인)")
     st.stop()
+except gspread.exceptions.WorksheetNotFound:
+    # [신규 에러] 탭을 못 찾을 경우
+    st.error(f"파일 '{SHEET_FILE_NAME}'에서 '{SHEET_TAB_NAME}' 탭을 찾을 수 없습니다! 탭 이름을 확인하세요.")
+    st.stop()
 except Exception as e:
-    st.error(f"시트 파일 열기 실패: {e}")
+    st.error(f"시트 열기 실패: {e}")
     st.stop()
 
-# ▲▲▲ [수정됨] v22: 구글 시트 설정 끝 ▲▲▲
+# ▲▲▲ [수정됨] v23: 구글 시트 설정 끝 ▲▲▲
 
 
 # --- 3. 계산 실행 버튼 ---
 if st.sidebar.button("✨ 계산 실행하기 ✨", type="primary"):
 
     # --- 계산 로직 ---
-    # (v21과 동일하므로 생략...)
+    # (v22와 동일하므로 생략)
     try:
         if num_squares_counted <= 0:
             st.error("!오류: '계수한 칸의 수'는 0보다 커야 합니다.")
@@ -118,7 +127,7 @@ if st.sidebar.button("✨ 계산 실행하기 ✨", type="primary"):
                 available_dishes = int(total_live_cells_in_tube // target_cells)
 
                 # --- 4. 결과 출력 (메인 화면) ---
-                # (v21과 동일하므로 생략...)
+                # (v22와 동일하므로 생략)
                 st.header("🔬 계산 결과")
                 st.subheader("[1] 현재 세포 상태")
                 col1, col2, col3 = st.columns(3)
@@ -158,7 +167,7 @@ if st.sidebar.button("✨ 계산 실행하기 ✨", type="primary"):
                         st.success(f"➡️ **이 분주용 현탁액을 {pipette_volume:.1f} mL씩 분주하면, 총 {total_dishes_final}개의 배양접시를 만들 수 있습니다.**")
 
                         # --- 일지 기록 폼 ---
-                        # (v21과 동일하므로 생략...)
+                        # (v22와 동일하므로 생략)
                         st.divider()
                         st.subheader("✍️ 이 작업을 배양 일지에 기록합니다")
 
@@ -178,7 +187,7 @@ if st.sidebar.button("✨ 계산 실행하기 ✨", type="primary"):
 
                         if submit_button:
                             # --- 저장 로직 ---
-                            # (v21과 동일하므로 생략...)
+                            # (v22와 동일하므로 생략)
                             log_data_list = [
                                 datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                 cell_name, int(passage_num),
@@ -191,13 +200,14 @@ if st.sidebar.button("✨ 계산 실행하기 ✨", type="primary"):
                                 f"{total_working_volume:.3f}", int(total_dishes_final)
                             ]
                             try:
+                                # v23에서도 이 부분은 동일
                                 sheet.append_row(log_data_list)
                                 st.success(f"✅ 일지 저장 완료! (Cell: {cell_name}, P:{passage_num})")
-                                st.info("Google Sheet에 데이터가 성공적으로 기록되었습니다.")
+                                st.info(f"Google Sheet '{SHEET_TAB_NAME}' 탭에 데이터가 성공적으로 기록되었습니다.")
                             except Exception as e:
                                 st.error(f"Google Sheet 저장 실패: {e}")
                                 st.warning("아래 JSON 데이터를 수동으로 복사하세요:")
-                                st.json(log_data_list) # 실패 시 데이터라도 보여줌
+                                st.json(log_data_list) 
 
     except Exception as e:
         st.error(f"계산 중 오류가 발생했습니다: {e}")
