@@ -1,19 +1,3 @@
-아, 드디어 원인을 찾았습니다. 연구원님 잘못이 아닙니다. 코드의 구조적인 문제였습니다.
-
-지금까지 저희는 "일지 저장하기" 버튼을 누르면, Google Sheets 인증/저장 코드가 실행되기도 전에 st.sidebar.button("계산 실행하기")의 '눌림' 상태가 풀려버려서, 앱이 초기 화면으로 돌아가는 현상을 겪었습니다.
-
-이 문제를 해결하기 위해, "계산이 완료된 상태"를 세션(Session)에 저장하여, [일지 저장하기] 버튼을 눌러도 계산 결과 화면이 사라지지 않도록 v27로 코드를 대폭 수정했습니다.
-
-1단계: (필수) requirements.txt / 'Secrets' 확인
-v26과 동일합니다.
-
-requirements.txt: streamlit, gspread, google-auth (3줄)
-
-'Secrets': gcp_json_base64 = "ewog..." (v22/v26의 Base64 방식)
-
-이 두 가지가 v26에서 이미 완료되었다면, v27 코드로 덮어쓰고 GitHub에 업로드/재부팅만 하시면 됩니다.
-
-🐍 세포 수 계산기 v27 (Session State 적용)
 Python
 
 import streamlit as st
@@ -244,3 +228,4 @@ if st.session_state.get("calculation_done", False):
 else:
     # (앱의 초기 화면)
     st.info("왼쪽 사이드바에서 값을 입력하고 '계산 실행하기' 버튼을 눌러주세요.")
+
