@@ -1,5 +1,3 @@
-Python
-
 import streamlit as st
 import math
 from datetime import datetime
@@ -228,4 +226,5 @@ if st.session_state.get("calculation_done", False):
 else:
     # (앱의 초기 화면)
     st.info("왼쪽 사이드바에서 값을 입력하고 '계산 실행하기' 버튼을 눌러주세요.")
+
 
